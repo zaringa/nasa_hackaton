@@ -18,7 +18,7 @@ import numpy as np
 
 
 ROOT = Path(__file__).resolve().parent
-EXPECTED_FORMULA_DIGEST = "d6130ac2d4c192f68bd19fb04769a078ae084ab33ba4a3afc378f1dc6baffa8d"
+EXPECTED_FORMULA_DIGEST = "7b6e79527f3c394774865a97d643d260c5bdefd39482f35b7e5f168865868ea4"
 TEST_FILES = {"m": "test_mini_model.py", "a": "test_formula_audit.py"}
 
 
@@ -328,7 +328,10 @@ def main(argv: list[str] | None = None) -> int:
 SPECIFICATIONS = """
 001|Input|Reference sphere radius|observer_position|m:test_spherical_coordinates_and_observer|The dataset radius is supplied by the caller; the numerical value is an example.
 002|Direct|Degrees to radians|degrees_to_radians|m:test_spherical_coordinates_and_observer|
-003-006|Direct|Spherical position components|spherical_position,radial_direction|a:test_coordinate_axes_and_basis_example|
+003|Direct|Spherical position components|spherical_position,radial_direction|a:test_coordinate_axes_and_basis_example|
+004|Direct|Spherical position components|spherical_position,radial_direction|a:test_coordinate_axes_and_basis_example|
+005|Direct|Spherical position components|spherical_position,radial_direction|a:test_coordinate_axes_and_basis_example|
+006|Direct|Spherical position components|spherical_position,radial_direction|a:test_coordinate_axes_and_basis_example|
 007|Example|Positions on the coordinate axes|spherical_position|a:test_coordinate_axes_and_basis_example|
 008|Direct|Radial unit vector|radial_direction,unit_vector|a:test_coordinate_axes_and_basis_example|
 009|Input|Site ground elevation|observer_position,build_sampled_horizon|m:test_spherical_coordinates_and_observer|Ground elevation is supplied; actual DEM reading is an external data input.
@@ -338,99 +341,145 @@ SPECIFICATIONS = """
 013|Direct|Radial position derivative|position_derivatives,local_basis|m:test_position_derivatives|
 014|Example|Up vector at latitude 30 degrees|local_basis|a:test_coordinate_axes_and_basis_example|
 015|Derivation|First-order longitude increment|position_derivatives|a:test_first_order_longitude_increment|The Taylor step is a derivation; its second-order remainder is checked.
-016|Direct|Longitude derivative|position_derivatives|m:test_position_derivatives|
-017|Direct|Normalized east direction|local_basis|m:test_position_derivatives|The simplified trigonometric result is used directly.
-018|Direct|Latitude derivative|position_derivatives|m:test_position_derivatives|
-019|Direct|Normalized north direction|local_basis|m:test_position_derivatives|
-020|Example|North vector at latitude 30 degrees|local_basis|a:test_coordinate_axes_and_basis_example|
-021-026|Identity|Unit lengths orthogonality and orientation|local_basis|a:test_basis_identities_on_many_sites|These are properties of the returned basis, not six separate algorithms.
-027|Direct|Terrain derivative with a variable radius|terrain_derivatives|a:test_terrain_derivatives_against_finite_differences|
-028|Direct|Vector expansion in the local basis|local_to_global|a:test_local_projections_and_origin_subtraction|
-029|Derivation|Dot product isolates the east component|global_to_local|a:test_local_projections_and_origin_subtraction|The intermediate cancellation follows from orthonormality.
-030|Direct|Local components as dot products|global_to_local|a:test_local_projections_and_origin_subtraction|
-031|Definition|Basis matrix columns|local_basis|a:test_basis_identities_on_many_sites|
-032|Direct|ENU to XYZ|local_to_global|a:test_local_projections_and_origin_subtraction|
-033|Direct|XYZ to ENU|global_to_local|a:test_local_projections_and_origin_subtraction|NumPy uses row-vector storage; v @ B equals the transpose of B.T @ column_v.
-034|Identity|Inverse equals transpose|local_basis|a:test_basis_identities_on_many_sites|An algebraic property; no runtime matrix inversion is needed.
-035|Direct|Observer-relative body vector|observer_to_body|a:test_local_projections_and_origin_subtraction|
-036|Direct|Horizontal vector length|azimuth_elevation|m:test_basis_and_document_example|
-037|Derivation|Elevation tangent relation|azimuth_elevation|a:test_azimuth_convention_and_component_reconstruction|
-038|Direct|Elevation using atan2|azimuth_elevation|m:test_basis_and_document_example|
-039|Direct|Equivalent elevation using arcsine|elevation_from_sine|m:test_basis_and_document_example|
-040|Definition|Azimuth origin and orientation|azimuth_elevation|a:test_azimuth_convention_and_component_reconstruction|
-041|Direct|Horizontal components from azimuth|horizontal_components|a:test_azimuth_convention_and_component_reconstruction|
-042|Direct|Azimuth using atan2|azimuth_elevation|a:test_azimuth_convention_and_component_reconstruction|
-043|Example|Numerical ENU basis|local_basis|m:test_basis_and_document_example|
-044|Example|Illustrative input vector|global_to_local|m:test_basis_and_document_example|A test fixture, not an observation or a function to calculate that vector.
-045-047|Example|Projected vector and its angles|global_to_local,azimuth_elevation|m:test_basis_and_document_example|
-048|Numerical|Continuous terrain supremum|build_sampled_horizon,make_horizon|m:test_sampled_horizon_and_north_wrap|A maximum over finite terrain samples followed by periodic interpolation approximates the supremum.
-049|Direct|Angular clearance above terrain|angular_clearance|a:test_great_circle_and_clearance|
-050-051|Direct|Horizontal direction and great-circle direction|great_circle_direction|a:test_great_circle_and_clearance|
-052|Direct|Terrain radius from reference radius and elevation|build_sampled_horizon|m:test_sampled_horizon_and_north_wrap|
-053-055|Direct|Terrain vector components and exact elevation angle|great_circle_direction,terrain_elevation_angle|m:test_exact_terrain_matches_vector_geometry|
-056|Numerical|Horizon as the supremum along a direction|build_sampled_horizon|m:test_sampled_horizon_and_north_wrap|Finite scan samples do not guarantee detection of every intervening ridge.
-057|Derivation|Small-angle sine and cosine expansions|approximate_terrain_elevation|a:test_small_angle_curvature_and_flat_comparison|The truncated expansions justify the approximation; the exact path uses NumPy sine and cosine.
-058-059|Approximation|Terrain elevation with curvature drop|approximate_terrain_elevation,curvature_drop|a:test_small_angle_curvature_and_flat_comparison|Requires small central angles and elevations small relative to the reference radius.
-060|Example|Flat-surface summit elevation comparison|approximate_terrain_elevation|a:test_small_angle_curvature_and_flat_comparison|The flat comparison is an example evaluated with atan2 in the test; the related runtime function includes curvature.
-061-062|Example|Spherical summit angle and curvature drop|terrain_elevation_angle,curvature_drop|m:test_curvature_and_coverage_examples|
-063|Derivation|Tangent triangle horizon angle|smooth_sphere_horizon|m:test_curvature_and_coverage_examples|
-064|Direct|Negative smooth-sphere horizon|smooth_sphere_horizon|m:test_curvature_and_coverage_examples|
-065|Example|Lunar horizon and horizon distance at 2 m|smooth_sphere_horizon,smooth_sphere_horizon_distance|m:test_curvature_and_coverage_examples|
-066|Direct|Ground-level sphere elevation and limiting supremum|ground_level_sphere_elevation|a:test_ground_level_horizon_is_a_supremum|The sampled maximum at h=0 can be negative although the continuous supremum is zero.
-067|Input|Global minimum and maximum terrain radii|terrain_coverage_limit|a:test_coverage_bound_against_line_segment_occlusion|Actual guaranteed global bounds must come from the surface model.
-068-070|Direct|Two tangent angles and sufficient terrain coverage|terrain_coverage_limit|a:test_coverage_bound_against_line_segment_occlusion|The segment test independently checks inner-sphere obstruction beyond the computed bound.
-071|Example|Illustrative global radius bounds|terrain_coverage_limit|m:test_curvature_and_coverage_examples|
-072|Approximation|Feature angular width|feature_angular_width|a:test_feature_width_and_uncertainty|Uses the small-angle width divided by distance approximation.
-073-075|Direct|Body distance and angular radius|angular_radius|a:test_angular_disc_geometry_and_area_derivative|
-076|Example|Illustrative solar angular radius|angular_radius|a:test_angular_disc_geometry_and_area_derivative|
-077|Direct|Centre clearance above a straight boundary|angular_clearance|a:test_great_circle_and_clearance|
-078|Direct|Fully blocked partially visible and fully visible cases|flat_disc_fraction|m:test_disc_formula_and_area_integral|Exact within the adopted planar small-disc model.
-079-080|Derivation|Planar circular domain and strip endpoints|disc_strip_width,disc_sample_directions|a:test_disc_sample_coordinates_and_weighted_areas|The circle is a model definition and the square-root endpoints lead to the strip width.
-081|Direct|Circular strip width and area element|disc_strip_width|a:test_angular_disc_geometry_and_area_derivative|
-082|Direct|Visible circular area from its antiderivative|flat_disc_visible_area,disc_area_antiderivative|m:test_disc_formula_and_area_integral|The planar integral is evaluated in closed form.
-083-084|Derivation|Trigonometric substitution in the area integral|disc_area_antiderivative|a:test_angular_disc_geometry_and_area_derivative|The substitution is a derivation step, not an additional runtime algorithm.
-085-086|Direct|Area antiderivative and its lower-limit evaluation|disc_area_antiderivative|a:test_angular_disc_geometry_and_area_derivative|
-087-088|Direct|Normalized clearance and circular-segment fraction|flat_disc_fraction|m:test_disc_formula_and_area_integral|Clipping k to [-1,1] is algebraically equivalent to the three cases.
-089-090|Example|Half and offset disc fractions|flat_disc_fraction|m:test_disc_formula_and_area_integral|
-091|Direct|Terrain ray mask|terrain_visibility|a:test_great_circle_and_clearance|
-092|Numerical|Visible-area integral for uneven terrain|disc_terrain_fraction,weighted_visible_fraction|m:test_disc_samples_converge_to_straight_boundary|Finite equal-area samples approximate the integral; a straight-boundary analytic result is checked.
-093-094|Direct|Weighted and equal-weight visible sums|weighted_visible_fraction|a:test_disc_sample_coordinates_and_weighted_areas|
-095|Direct|Square-root radius law for equal-area samples|disc_sample_directions|a:test_disc_sample_coordinates_and_weighted_areas|
-096-099|Direct|Disc basis coordinates and normalized ray directions|unit_vector,disc_sample_directions|a:test_disc_sample_coordinates_and_weighted_areas|Directions use the stated planar tangent projection and small-disc area interpretation.
-100|Direct|Earth angular radius and centre direction|angular_radius,earth_open_mask|a:test_occultation_against_ray_sphere_intersection|
-101-103|Direct|Angular Earth obstruction and open-ray mask|earth_open_mask|a:test_occultation_against_ray_sphere_intersection|The forward ray is also required to intersect a nearer occulting body.
-104|Direct|Terrain and Earth mask intersection|solar_visibility|m:test_combined_masks_and_occultation|
-105|Direct|Mean of the combined ray masks|solar_visibility,weighted_visible_fraction|m:test_combined_masks_and_occultation|This finite sum is direct; its approximation to the continuous disc remains numerical.
-106|Direct|Earth centre clearance and visibility indicator|solar_visibility,point_visibility_indicator|a:test_great_circle_and_clearance|
-107-108|Direct|Incidence cosine and projected panel area|effective_panel_area|m:test_panel_power_and_radiance|The implementation clips a negative projected area to zero for a single-sided panel.
-109|Approximation|Power using the solar centre direction|panel_power|m:test_panel_power_and_radiance|Assumes negligible incidence variation over a small uniform-brightness disc.
-110|Direct|Inverse-square irradiance scaling|irradiance_at_distance|m:test_panel_power_and_radiance|
-111|Numerical|Radiance integral for panel power|panel_power_from_radiance|m:test_panel_power_and_radiance|The caller supplies radiance and solid-angle quadrature weights; analyze uses the centre-direction approximation.
-112|Numerical|Zero of the continuous clearance function|angular_clearance,refine_transition|m:test_event_times|Bisection refines an already bracketed root; it does not detect all roots by itself.
-113|Direct|Illumination threshold margin and state|illumination_indicator,windows_from_samples|m:test_windows_and_duration|A zero threshold uses strictly positive light to exclude complete darkness.
-114-116|Derivation|Solving the linear margin interpolation for time|linear_transition_time|m:test_event_times|These are algebraic steps leading to the same interpolated crossing time.
-117|Approximation|Interpolated crossing time|linear_transition_time|m:test_event_times|Exact for the chosen linear interpolant, approximate for a nonlinear physical trajectory.
-118|Example|Twenty-minute crossing example|linear_transition_time|m:test_event_times|
-119|Derivation|First-order expansion near an event|transition_time_uncertainty|a:test_taylor_error_and_event_sensitivity|
-120|Approximation|Event timing uncertainty from angular uncertainty|transition_time_uncertainty|a:test_feature_width_and_uncertainty|A local first-order sensitivity estimate, with infinite sensitivity at zero rate.
-121|Direct|State duration integral over known windows|total_duration|a:test_duration_integral_and_joint_intersection|Exact for the supplied windows; sampled estimates of the window boundaries have separate errors.
-122|Direct|Sum of window lengths|total_duration,window_durations|a:test_duration_integral_and_joint_intersection|
-123|Direct|Fraction of analysis time with suitable light|analyze|m:test_complete_calculation_uses_explicit_formulas|
-124|Direct|Earth state duration integral over known windows|total_duration|a:test_duration_integral_and_joint_intersection|
-125-126|Direct|Longest suitable window and longest interruption|longest_duration,complement_windows|a:test_duration_integral_and_joint_intersection|
-127|Numerical|Equivalent full-disc time integral|equivalent_full_disc_time,time_integral|a:test_exact_two_full_hours_plus_one_half_visible_hour|Trapezoids approximate sampled functions; interval mode is exact for supplied piecewise-constant intervals.
-128|Example|Two fully visible hours and one half-visible hour|equivalent_full_disc_time|a:test_exact_two_full_hours_plus_one_half_visible_hour|Interval mode returns exactly 9000 seconds or 2.5 hours.
-129|Direct|Mean visible fraction|mean_disc_fraction|a:test_exact_two_full_hours_plus_one_half_visible_hour|The mean inherits the accuracy of the chosen integration method.
-130|Numerical|Electrical energy integral|electrical_energy,time_integral|a:test_exact_two_full_hours_plus_one_half_visible_hour|Trapezoids or exact integration of supplied piecewise-constant powers.
-131|Direct|Watt-hour to joule conversion|electrical_energy|m:test_integrals_use_elapsed_time|
-132|Direct|Trapezoidal integration sum|time_integral|a:test_trapezoid_exactness_and_quadratic_convergence|The finite sum is direct; it approximates an unknown continuous power curve.
-133|Direct|Joint state indicator|joint_indicator|a:test_duration_integral_and_joint_intersection|
-134|Direct|Joint duration from interval intersection|intersect_windows,total_duration|a:test_duration_integral_and_joint_intersection|Exact for the supplied window sets.
-135|Direct|Intersection length of two windows|intersect_windows|m:test_windows_and_duration|
-136|Direct|Time remaining until the next actual event|time_to_next_event|m:test_windows_and_duration|Event times exclude boundaries caused only by the end of the analysis period.
-137|Direct|Smooth-sphere horizon with nonzero DEM elevation|smooth_sphere_horizon|a:test_nonzero_dem_sphere_and_height_sensitivity|
-138|Direct|Terrain angle derivative with observer height|observer_height_sensitivity|a:test_nonzero_dem_sphere_and_height_sensitivity|
-139|Approximation|Elevation uncertainty from terrain height uncertainty|elevation_uncertainty|a:test_feature_width_and_uncertainty|Uses small angles and a small height-to-distance ratio.
+016|Derivation|Trigonometric differentiation rules|position_derivatives|a:test_first_order_longitude_increment|Explicit intermediate step restored while comparing the original derivation with the merged document.
+017|Direct|Longitude derivative|position_derivatives|m:test_position_derivatives|
+018|Derivation|Longitude derivative length before normalization|position_derivatives|m:test_position_derivatives|Explicit intermediate step restored while comparing the original derivation with the merged document.
+019|Direct|Normalized east direction|local_basis|m:test_position_derivatives|The simplified trigonometric result is used directly.
+020|Example|East direction at the two reference meridians|local_basis|a:test_coordinate_axes_and_basis_example|Explicit intermediate step restored while comparing the original derivation with the merged document.
+021|Direct|Latitude derivative|position_derivatives|m:test_position_derivatives|
+022|Derivation|Factored latitude derivative|position_derivatives|m:test_position_derivatives|Explicit intermediate step restored while comparing the original derivation with the merged document.
+023|Derivation|Latitude derivative length before normalization|position_derivatives|m:test_position_derivatives|Explicit intermediate step restored while comparing the original derivation with the merged document.
+024|Direct|Normalized north direction|local_basis|m:test_position_derivatives|
+025|Example|North vector at latitude 30 degrees|local_basis|a:test_coordinate_axes_and_basis_example|
+026|Identity|Required lengths and mutual orthogonality of ENU|local_basis|a:test_basis_identities_on_many_sites|Explicit intermediate step restored while comparing the original derivation with the merged document.
+027|Identity|Unit lengths orthogonality and orientation|local_basis|a:test_basis_identities_on_many_sites|These are properties of the returned basis, not six separate algorithms.
+028|Identity|Unit lengths orthogonality and orientation|local_basis|a:test_basis_identities_on_many_sites|These are properties of the returned basis, not six separate algorithms.
+029|Identity|Unit lengths orthogonality and orientation|local_basis|a:test_basis_identities_on_many_sites|These are properties of the returned basis, not six separate algorithms.
+030|Identity|Unit lengths orthogonality and orientation|local_basis|a:test_basis_identities_on_many_sites|These are properties of the returned basis, not six separate algorithms.
+031|Identity|Unit lengths orthogonality and orientation|local_basis|a:test_basis_identities_on_many_sites|These are properties of the returned basis, not six separate algorithms.
+032|Identity|East and up orthogonality|local_basis|a:test_basis_identities_on_many_sites|Explicit intermediate step restored while comparing the original derivation with the merged document.
+033|Identity|Unit lengths orthogonality and orientation|local_basis|a:test_basis_identities_on_many_sites|These are properties of the returned basis, not six separate algorithms.
+034|Direct|Terrain derivative with a variable radius|terrain_derivatives|a:test_terrain_derivatives_against_finite_differences|
+035|Direct|Vector expansion in the local basis|local_to_global|a:test_local_projections_and_origin_subtraction|
+036|Derivation|Dot product isolates the east component|global_to_local|a:test_local_projections_and_origin_subtraction|The intermediate cancellation follows from orthonormality.
+037|Direct|Local components as dot products|global_to_local|a:test_local_projections_and_origin_subtraction|
+038|Definition|Basis matrix columns|local_basis|a:test_basis_identities_on_many_sites|
+039|Direct|ENU to XYZ|local_to_global|a:test_local_projections_and_origin_subtraction|
+040|Direct|XYZ to ENU|global_to_local|a:test_local_projections_and_origin_subtraction|NumPy uses row-vector storage; v @ B equals the transpose of B.T @ column_v.
+041|Identity|Inverse equals transpose|local_basis|a:test_basis_identities_on_many_sites|An algebraic property; no runtime matrix inversion is needed.
+042|Direct|Observer-relative body vector|observer_to_body|a:test_local_projections_and_origin_subtraction|
+043|Direct|Horizontal vector length|azimuth_elevation|m:test_basis_and_document_example|
+044|Derivation|Elevation tangent relation|azimuth_elevation|a:test_azimuth_convention_and_component_reconstruction|
+045|Direct|Elevation using atan2|azimuth_elevation|m:test_basis_and_document_example|
+046|Derivation|Sine of elevation from vector length|elevation_from_sine|m:test_basis_and_document_example|Explicit intermediate step restored while comparing the original derivation with the merged document.
+047|Direct|Equivalent elevation using arcsine|elevation_from_sine|m:test_basis_and_document_example|
+048|Definition|Azimuth origin and orientation|azimuth_elevation|a:test_azimuth_convention_and_component_reconstruction|
+049|Direct|Horizontal components from azimuth|horizontal_components|a:test_azimuth_convention_and_component_reconstruction|
+050|Direct|Azimuth using atan2|azimuth_elevation|a:test_azimuth_convention_and_component_reconstruction|
+051|Example|Numerical ENU basis|local_basis|m:test_basis_and_document_example|
+052|Example|Illustrative input vector|global_to_local|m:test_basis_and_document_example|A test fixture, not an observation or a function to calculate that vector.
+053|Example|Projected vector and its angles|global_to_local,azimuth_elevation|m:test_basis_and_document_example|
+054|Example|Projected vector and its angles|global_to_local,azimuth_elevation|m:test_basis_and_document_example|
+055|Example|Projected vector and its angles|global_to_local,azimuth_elevation|m:test_basis_and_document_example|
+056|Numerical|Continuous terrain supremum|build_sampled_horizon,make_horizon|m:test_sampled_horizon_and_north_wrap|A maximum over finite terrain samples followed by periodic interpolation approximates the supremum.
+057|Direct|Angular clearance above terrain|angular_clearance|a:test_great_circle_and_clearance|
+058|Direct|Horizontal direction and great-circle direction|great_circle_direction|a:test_great_circle_and_clearance|
+059|Direct|Horizontal direction and great-circle direction|great_circle_direction|a:test_great_circle_and_clearance|
+060|Direct|Terrain radius from reference radius and elevation|build_sampled_horizon|m:test_sampled_horizon_and_north_wrap|
+061|Direct|Terrain vector components and exact elevation angle|great_circle_direction,terrain_elevation_angle|m:test_exact_terrain_matches_vector_geometry|
+062|Direct|Terrain vector components and exact elevation angle|great_circle_direction,terrain_elevation_angle|m:test_exact_terrain_matches_vector_geometry|
+063|Direct|Terrain vector components and exact elevation angle|great_circle_direction,terrain_elevation_angle|m:test_exact_terrain_matches_vector_geometry|
+064|Numerical|Horizon as the supremum along a direction|build_sampled_horizon|m:test_sampled_horizon_and_north_wrap|Finite scan samples do not guarantee detection of every intervening ridge.
+065|Derivation|Small-angle sine and cosine expansions|approximate_terrain_elevation|a:test_small_angle_curvature_and_flat_comparison|The truncated expansions justify the approximation; the exact path uses NumPy sine and cosine.
+066|Approximation|Terrain elevation with curvature drop|approximate_terrain_elevation,curvature_drop|a:test_small_angle_curvature_and_flat_comparison|Requires small central angles and elevations small relative to the reference radius.
+067|Approximation|Terrain elevation with curvature drop|approximate_terrain_elevation,curvature_drop|a:test_small_angle_curvature_and_flat_comparison|Requires small central angles and elevations small relative to the reference radius.
+068|Example|Flat-surface summit elevation comparison|approximate_terrain_elevation|a:test_small_angle_curvature_and_flat_comparison|The flat comparison is an example evaluated with atan2 in the test; the related runtime function includes curvature.
+069|Example|Spherical summit angle and curvature drop|terrain_elevation_angle,curvature_drop|m:test_curvature_and_coverage_examples|
+070|Example|Spherical summit angle and curvature drop|terrain_elevation_angle,curvature_drop|m:test_curvature_and_coverage_examples|
+071|Derivation|Tangent triangle horizon angle|smooth_sphere_horizon|m:test_curvature_and_coverage_examples|
+072|Direct|Negative smooth-sphere horizon|smooth_sphere_horizon|m:test_curvature_and_coverage_examples|
+073|Example|Lunar horizon and horizon distance at 2 m|smooth_sphere_horizon,smooth_sphere_horizon_distance|m:test_curvature_and_coverage_examples|
+074|Direct|Ground-level sphere elevation and limiting supremum|ground_level_sphere_elevation|a:test_ground_level_horizon_is_a_supremum|The sampled maximum at h=0 can be negative although the continuous supremum is zero.
+075|Identity|Continuous ground-level horizon supremum|ground_level_sphere_elevation,smooth_sphere_horizon|a:test_ground_level_horizon_is_a_supremum|Explicit intermediate step restored while comparing the original derivation with the merged document.
+076|Input|Global minimum and maximum terrain radii|terrain_coverage_limit|a:test_coverage_bound_against_line_segment_occlusion|Actual guaranteed global bounds must come from the surface model.
+077|Direct|Two tangent angles and sufficient terrain coverage|terrain_coverage_limit|a:test_coverage_bound_against_line_segment_occlusion|The segment test independently checks inner-sphere obstruction beyond the computed bound.
+078|Direct|Two tangent angles and sufficient terrain coverage|terrain_coverage_limit|a:test_coverage_bound_against_line_segment_occlusion|The segment test independently checks inner-sphere obstruction beyond the computed bound.
+079|Direct|Two tangent angles and sufficient terrain coverage|terrain_coverage_limit|a:test_coverage_bound_against_line_segment_occlusion|The segment test independently checks inner-sphere obstruction beyond the computed bound.
+080|Example|Illustrative global radius bounds|terrain_coverage_limit|m:test_curvature_and_coverage_examples|
+081|Approximation|Feature angular width|feature_angular_width|a:test_feature_width_and_uncertainty|Uses the small-angle width divided by distance approximation.
+082|Direct|Body distance and angular radius|angular_radius|a:test_angular_disc_geometry_and_area_derivative|
+083|Direct|Body distance and angular radius|angular_radius|a:test_angular_disc_geometry_and_area_derivative|
+084|Direct|Body distance and angular radius|angular_radius|a:test_angular_disc_geometry_and_area_derivative|
+085|Example|Illustrative solar angular radius|angular_radius|a:test_angular_disc_geometry_and_area_derivative|
+086|Direct|Centre clearance above a straight boundary|angular_clearance|a:test_great_circle_and_clearance|
+087|Direct|Fully blocked partially visible and fully visible cases|flat_disc_fraction|m:test_disc_formula_and_area_integral|Exact within the adopted planar small-disc model.
+088|Derivation|Planar circular domain and strip endpoints|disc_strip_width,disc_sample_directions|a:test_disc_sample_coordinates_and_weighted_areas|The circle is a model definition and the square-root endpoints lead to the strip width.
+089|Derivation|Visible side of the straight horizon in disc coordinates|flat_disc_visible_area|m:test_disc_formula_and_area_integral|Explicit intermediate step restored while comparing the original derivation with the merged document.
+090|Derivation|Planar circular domain and strip endpoints|disc_strip_width,disc_sample_directions|a:test_disc_sample_coordinates_and_weighted_areas|The circle is a model definition and the square-root endpoints lead to the strip width.
+091|Direct|Circular strip width and area element|disc_strip_width|a:test_angular_disc_geometry_and_area_derivative|
+092|Direct|Visible circular area from its antiderivative|flat_disc_visible_area,disc_area_antiderivative|m:test_disc_formula_and_area_integral|The planar integral is evaluated in closed form.
+093|Derivation|Trigonometric substitution in the area integral|disc_area_antiderivative|a:test_angular_disc_geometry_and_area_derivative|The substitution is a derivation step, not an additional runtime algorithm.
+094|Derivation|Double-angle identity used in disc integration|disc_area_antiderivative|a:test_angular_disc_geometry_and_area_derivative|Explicit intermediate step restored while comparing the original derivation with the merged document.
+095|Derivation|Trigonometric substitution in the area integral|disc_area_antiderivative|a:test_angular_disc_geometry_and_area_derivative|The substitution is a derivation step, not an additional runtime algorithm.
+096|Direct|Area antiderivative and its lower-limit evaluation|disc_area_antiderivative|a:test_angular_disc_geometry_and_area_derivative|
+097|Direct|Area antiderivative and its lower-limit evaluation|disc_area_antiderivative|a:test_angular_disc_geometry_and_area_derivative|
+098|Direct|Visible circular area after substituting integration limits|flat_disc_visible_area,disc_area_antiderivative|m:test_disc_formula_and_area_integral|Explicit intermediate step restored while comparing the original derivation with the merged document.
+099|Direct|Normalized clearance and circular-segment fraction|flat_disc_fraction|m:test_disc_formula_and_area_integral|Clipping k to [-1,1] is algebraically equivalent to the three cases.
+100|Direct|Normalized clearance and circular-segment fraction|flat_disc_fraction|m:test_disc_formula_and_area_integral|Clipping k to [-1,1] is algebraically equivalent to the three cases.
+101|Example|Half and offset disc fractions|flat_disc_fraction|m:test_disc_formula_and_area_integral|
+102|Example|Half and offset disc fractions|flat_disc_fraction|m:test_disc_formula_and_area_integral|
+103|Direct|Terrain ray mask|terrain_visibility|a:test_great_circle_and_clearance|
+104|Numerical|Visible-area integral for uneven terrain|disc_terrain_fraction,weighted_visible_fraction|m:test_disc_samples_converge_to_straight_boundary|Finite equal-area samples approximate the integral; a straight-boundary analytic result is checked.
+105|Direct|Weighted and equal-weight visible sums|weighted_visible_fraction|a:test_disc_sample_coordinates_and_weighted_areas|
+106|Direct|Weighted and equal-weight visible sums|weighted_visible_fraction|a:test_disc_sample_coordinates_and_weighted_areas|
+107|Direct|Square-root radius law for equal-area samples|disc_sample_directions|a:test_disc_sample_coordinates_and_weighted_areas|
+108|Direct|Disc basis coordinates and normalized ray directions|unit_vector,disc_sample_directions|a:test_disc_sample_coordinates_and_weighted_areas|Directions use the stated planar tangent projection and small-disc area interpretation.
+109|Direct|Disc basis coordinates and normalized ray directions|unit_vector,disc_sample_directions|a:test_disc_sample_coordinates_and_weighted_areas|Directions use the stated planar tangent projection and small-disc area interpretation.
+110|Direct|Disc basis coordinates and normalized ray directions|unit_vector,disc_sample_directions|a:test_disc_sample_coordinates_and_weighted_areas|Directions use the stated planar tangent projection and small-disc area interpretation.
+111|Direct|Disc basis coordinates and normalized ray directions|unit_vector,disc_sample_directions|a:test_disc_sample_coordinates_and_weighted_areas|Directions use the stated planar tangent projection and small-disc area interpretation.
+112|Direct|Earth angular radius and centre direction|angular_radius,earth_open_mask|a:test_occultation_against_ray_sphere_intersection|
+113|Direct|Angular Earth obstruction and open-ray mask|earth_open_mask|a:test_occultation_against_ray_sphere_intersection|The forward ray is also required to intersect a nearer occulting body.
+114|Direct|Angular Earth obstruction and open-ray mask|earth_open_mask|a:test_occultation_against_ray_sphere_intersection|The forward ray is also required to intersect a nearer occulting body.
+115|Direct|Angular Earth obstruction and open-ray mask|earth_open_mask|a:test_occultation_against_ray_sphere_intersection|The forward ray is also required to intersect a nearer occulting body.
+116|Direct|Terrain and Earth mask intersection|solar_visibility|m:test_combined_masks_and_occultation|
+117|Direct|Mean of the combined ray masks|solar_visibility,weighted_visible_fraction|m:test_combined_masks_and_occultation|This finite sum is direct; its approximation to the continuous disc remains numerical.
+118|Direct|Earth centre clearance and visibility indicator|solar_visibility,point_visibility_indicator|a:test_great_circle_and_clearance|
+119|Direct|Incidence cosine and projected panel area|effective_panel_area|m:test_panel_power_and_radiance|The implementation clips a negative projected area to zero for a single-sided panel.
+120|Direct|Incidence cosine and projected panel area|effective_panel_area|m:test_panel_power_and_radiance|The implementation clips a negative projected area to zero for a single-sided panel.
+121|Approximation|Power using the solar centre direction|panel_power|m:test_panel_power_and_radiance|Assumes negligible incidence variation over a small uniform-brightness disc.
+122|Direct|Inverse-square irradiance scaling|irradiance_at_distance|m:test_panel_power_and_radiance|
+123|Numerical|Radiance integral for panel power|panel_power_from_radiance|m:test_panel_power_and_radiance|The caller supplies radiance and solid-angle quadrature weights; analyze uses the centre-direction approximation.
+124|Numerical|Zero of the continuous clearance function|angular_clearance,refine_transition|m:test_event_times|Bisection refines an already bracketed root; it does not detect all roots by itself.
+125|Direct|Illumination threshold margin and state|illumination_indicator,windows_from_samples|m:test_windows_and_duration|A zero threshold uses strictly positive light to exclude complete darkness.
+126|Definition|Endpoint values of the transition margin|linear_transition_time|m:test_event_times|Explicit intermediate step restored while comparing the original derivation with the merged document.
+127|Derivation|Solving the linear margin interpolation for time|linear_transition_time|m:test_event_times|These are algebraic steps leading to the same interpolated crossing time.
+128|Derivation|Solving the linear margin interpolation for time|linear_transition_time|m:test_event_times|These are algebraic steps leading to the same interpolated crossing time.
+129|Derivation|Solving the linear margin interpolation for time|linear_transition_time|m:test_event_times|These are algebraic steps leading to the same interpolated crossing time.
+130|Approximation|Interpolated crossing time|linear_transition_time|m:test_event_times|Exact for the chosen linear interpolant, approximate for a nonlinear physical trajectory.
+131|Example|Endpoint values in the twenty-minute event example|linear_transition_time|m:test_event_times|Explicit intermediate step restored while comparing the original derivation with the merged document.
+132|Example|Twenty-minute crossing example|linear_transition_time|m:test_event_times|
+133|Derivation|First-order expansion near an event|transition_time_uncertainty|a:test_taylor_error_and_event_sensitivity|
+134|Approximation|Event timing uncertainty from angular uncertainty|transition_time_uncertainty|a:test_feature_width_and_uncertainty|A local first-order sensitivity estimate, with infinite sensitivity at zero rate.
+135|Definition|Indicator of the selected illumination criterion|illumination_indicator,power_indicator|m:test_windows_and_duration|Explicit intermediate step restored while comparing the original derivation with the merged document.
+136|Direct|State duration integral over known windows|total_duration|a:test_duration_integral_and_joint_intersection|Exact for the supplied windows; sampled estimates of the window boundaries have separate errors.
+137|Direct|Sum of window lengths|total_duration,window_durations|a:test_duration_integral_and_joint_intersection|
+138|Direct|Fraction of analysis time with suitable light|analyze|m:test_complete_calculation_uses_explicit_formulas|
+139|Direct|Earth state duration integral over known windows|total_duration|a:test_duration_integral_and_joint_intersection|
+140|Direct|Longest suitable window and longest interruption|longest_duration,complement_windows|a:test_duration_integral_and_joint_intersection|
+141|Direct|Longest suitable window and longest interruption|longest_duration,complement_windows|a:test_duration_integral_and_joint_intersection|
+142|Numerical|Equivalent full-disc time integral|equivalent_full_disc_time,time_integral|a:test_exact_two_full_hours_plus_one_half_visible_hour|Trapezoids approximate sampled functions; interval mode is exact for supplied piecewise-constant intervals.
+143|Example|Two fully visible hours and one half-visible hour|equivalent_full_disc_time|a:test_exact_two_full_hours_plus_one_half_visible_hour|Interval mode returns exactly 9000 seconds or 2.5 hours.
+144|Direct|Mean visible fraction|mean_disc_fraction|a:test_exact_two_full_hours_plus_one_half_visible_hour|The mean inherits the accuracy of the chosen integration method.
+145|Numerical|Electrical energy integral|electrical_energy,time_integral|a:test_exact_two_full_hours_plus_one_half_visible_hour|Trapezoids or exact integration of supplied piecewise-constant powers.
+146|Direct|Watt-hour to joule conversion|electrical_energy|m:test_integrals_use_elapsed_time|
+147|Direct|Trapezoidal integration sum|time_integral|a:test_trapezoid_exactness_and_quadratic_convergence|The finite sum is direct; it approximates an unknown continuous power curve.
+148|Direct|Joint state indicator|joint_indicator|a:test_duration_integral_and_joint_intersection|
+149|Direct|Joint duration from interval intersection|intersect_windows,total_duration|a:test_duration_integral_and_joint_intersection|Exact for the supplied window sets.
+150|Direct|Intersection length of two windows|intersect_windows|m:test_windows_and_duration|
+151|Direct|Time remaining until the next actual event|time_to_next_event|m:test_windows_and_duration|Event times exclude boundaries caused only by the end of the analysis period.
+152|Direct|Smooth-sphere horizon with nonzero DEM elevation|smooth_sphere_horizon|a:test_nonzero_dem_sphere_and_height_sensitivity|
+153|Direct|Terrain angle derivative with observer height|observer_height_sensitivity|a:test_nonzero_dem_sphere_and_height_sensitivity|
+154|Approximation|Elevation uncertainty from terrain height uncertainty|elevation_uncertainty|a:test_feature_width_and_uncertainty|Uses small angles and a small height-to-distance ratio.
 """
 
 REPORT_TEMPLATE = r"""# Formula implementation audit
@@ -458,7 +507,7 @@ The document stores a mathematical vector as a column and writes $v_{ENU}=B^{\ma
 
 ### The piecewise circular segment formula
 
-The implementation evaluates the interior formula with $k$ clipped to $[-1,1]$. At $k=-1$, $\arcsin(-1)=-\pi/2$ and the square-root term is zero, so $f=0$. At $k=1$ the result is $f=1$. For $-1<k<1$, clipping leaves $k$ unchanged. This is the same three-case formula in equation 088, within the planar small-disc assumptions. Separate tests differentiate the area antiderivative numerically and compare the strip integral with the closed form.
+The implementation evaluates the interior formula with $k$ clipped to $[-1,1]$. At $k=-1$, $\arcsin(-1)=-\pi/2$ and the square-root term is zero, so $f=0$. At $k=1$ the result is $f=1$. For $-1<k<1$, clipping leaves $k$ unchanged. This is the same three-case formula in equation 100, within the planar small-disc assumptions. Separate tests differentiate the area antiderivative numerically and compare the strip integral with the closed form.
 
 ### Visibility masks
 
